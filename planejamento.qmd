@@ -1,0 +1,153 @@
+---
+title: "Planejamento, coleta e organização de dados com suporte de planilhas e aplicativos"
+subtitle: "Disciplina de Pesquisa e Redação Científica"
+author: "Prof. Dr. Tiago Olivoto"
+institute: "LEMGAD/NEPEM/UFSC"
+date: today
+format: 
+  html:
+    theme: cosmo        # pode trocar: cosmo, journal, flatly, united, etc
+    toc: true           # ativa sumário
+    toc-depth: 3
+    toc-location: left
+    number-sections: true
+    code-fold: true     # código dobrável
+    code-tools: true    # botão de copiar código
+    df-print: paged
+    page-layout: article
+    fontsize: 14pt
+    linestretch: 1.5
+    smooth-scroll: true
+    title-block-banner: "#1AB281"  # cor do banner do título
+    title-block-style: default
+    title-block-banner-color: white
+    mainfont: "Arial"
+    monofont: "Fira Code"
+---
+
+# Pacotes
+
+
+```{r warning=FALSE, message=FALSE}
+library(tidyverse)
+library(FielDHub)
+library(qrlabelr)
+library(uuid)
+library(cli)
+library(rio)
+library(AgroR)
+library(patchwork)
+
+```
+
+# Estrutura da pasta
+```{r echo=FALSE}
+library(fs)
+fs::dir_tree(here::here(), recurse = 1)
+```
+
+
+# Aplicativo
+Fazer o download do aplicativo [FieldBook](https://play.google.com/store/apps/details?id=com.fieldbook.tracker&hl=pt_BR), disponível para Android
+
+
+# Funções auxiliares
+```{r}
+source("funcoes_planejamento.R")
+```
+
+
+
+# Experimentos unifatoriais
+## Caderno de campo
+```{r}
+
+
+```
+
+## Croqui
+```{r}
+
+```
+
+
+## Etiquetas
+
+**Somente executar quando tiver o caderno de campo**
+```{r}
+#| eval: false
+
+
+qrlabelr::gp_label(dat = as.data.frame(croqui_uni$fieldbook),
+                   # Top left 1
+                   top_left_txt1 = 'Gen:',
+                   top_left_id1 = 'TREATMENT',
+                   # Top left 2
+                   top_left_txt2 = 'Linha:',
+                   top_left_id2 = 'ROW',
+                   # Top right 1
+                   # top_right_txt1 = 'Rep:',
+                   # top_right_id1 = 'REP',
+                   # Top right 2
+                   top_right_txt2 = 'Col:',
+                   top_right_id2 = 'COL',
+                   # Bottom left 1
+                   bottom_left_txt1 = "UUID:",
+                   bottom_left_id1 = "UNIQUE_ID",
+                   # Bottom left 2
+                   bottom_left_txt2 = "Ensaio:",
+                   bottom_left_id2 = "LOCATION",
+                   # Center 1
+                   center_right_txt1 = "Bloco:",
+                   center_right_id1 = "REP",
+                   # Center 2
+                   # center_right_txt2 = "Protocolo:",
+                   # center_right_id2 = "LOCATION",
+                   # Center 3
+                   # center_right_txt3 = "Col",
+                   # center_right_id3 = "COLUMN",
+                   filename = "test.pdf",
+                   # Page size
+                   page_wdt = 8.27,
+                   page_hgt = 11.72,
+                   top_mar = 0,
+                   bot_mar = 0,
+                   left_mar = 0.25,
+                   right_mar = 0.25,
+                   # Layout
+                   numrow = 9,
+                   numcol = 3,
+                   font_sz = 10,
+                   rname = "Olivoto",
+                   get_unique_id = "custom",
+                   unique_id =  "UNIQUE_ID",
+                   family = "sans")
+```
+
+
+## Caderno a nível de planta
+```{r}
+
+```
+
+
+
+# Experimentos Fatoriais
+
+
+
+
+# Manipulação e organização de dados
+
+**Desafio**
+
+Na pasta data, são encontrados quatro conjuntos de dados.
+
+* `capsulas.xlsx` resultado da contagem de cápsulas de genótipos de linhaça.
+* `graos.csv` resultado da contagem de grãos de genótipos de linhaça.
+* `laboratório` dados obtidos da avaliação das plantas.
+* `mmg` dados da massa de mil grãos dos genótipos
+
+O desafio consistirá em combinar calcular o número de grãos e cápsulas de cada planta, o comprimento e largura médio dos grãos de cada planta e juntar com as variáveis de plantas.
+
+Em uma segunda etapa, computar os valores médios por genótipo, juntando com a massa de mil grãos.
