@@ -26,6 +26,21 @@ format:
 ---
 
 # Pacotes
+```{r}
+required_pkgs <- c(
+  "tidyverse",
+  "FielDHub",
+  "qrlabelr",
+  "uuid",
+  "cli",
+  "rio",
+  "AgroR",
+  "patchwork"
+)
+renv::init(bare = TRUE)
+renv::install(required_pkgs)
+renv::snapshot()
+```
 
 
 ```{r warning=FALSE, message=FALSE}
@@ -54,6 +69,7 @@ Fazer o download do aplicativo [FieldBook](https://play.google.com/store/apps/de
 # Funções auxiliares
 ```{r}
 source("funcoes_planejamento.R")
+
 ```
 
 
@@ -62,11 +78,39 @@ source("funcoes_planejamento.R")
 ## Caderno de campo
 ```{r}
 
+trats <- c("NEPEM01", "TESTEMUNHA", "GEN01", "GEN02", "GEN03", "GEN04", "GEN05", "GEN06")
+
+dic <- unifatorial(trats,
+                   seed = 123,
+                   exp_name = "Ensaio Batata")
+
+
+dbc <- unifatorial(trats,
+                   seed = 123,
+                   design = "RCBD",
+                   layout = "custom",
+                   layout_allocation = c(2, 4),
+                   exp_name = "Ensaio Batata")
+
+export(dbc$fieldbook, "caderno_dbc.xlsx")
 
 ```
 
+
+
 ## Croqui
 ```{r}
+dic[["fieldmap"]]
+ggsave("croqui_dic.pdf",
+       width = 10,
+       height = 5)
+
+
+dbc[["fieldmap"]]
+ggsave("croqui_dbc_2x4.pdf",
+       width = 10,
+       height = 5)
+
 
 ```
 
@@ -78,28 +122,28 @@ source("funcoes_planejamento.R")
 #| eval: false
 
 
-qrlabelr::gp_label(dat = as.data.frame(croqui_uni$fieldbook),
+qrlabelr::gp_label(dat = as.data.frame(dbc$fieldbook),
                    # Top left 1
-                   top_left_txt1 = 'Gen:',
+                   top_left_txt1 = 'Trat:',
                    top_left_id1 = 'TREATMENT',
                    # Top left 2
                    top_left_txt2 = 'Linha:',
                    top_left_id2 = 'ROW',
                    # Top right 1
-                   # top_right_txt1 = 'Rep:',
+                   # top_right_txt1 = 'Bloco:',
                    # top_right_id1 = 'REP',
                    # Top right 2
                    top_right_txt2 = 'Col:',
                    top_right_id2 = 'COL',
                    # Bottom left 1
-                   bottom_left_txt1 = "UUID:",
-                   bottom_left_id1 = "UNIQUE_ID",
+                   bottom_left_txt1 = "Experimento:",
+                   bottom_left_id1 = "LOCATION",
                    # Bottom left 2
-                   bottom_left_txt2 = "Ensaio:",
-                   bottom_left_id2 = "LOCATION",
+                   bottom_left_txt2 = "Bloco:",
+                   bottom_left_id2 = "REP",
                    # Center 1
-                   center_right_txt1 = "Bloco:",
-                   center_right_id1 = "REP",
+                   center_right_txt1 = "Parcela:",
+                   center_right_id1 = "PLOT",
                    # Center 2
                    # center_right_txt2 = "Protocolo:",
                    # center_right_id2 = "LOCATION",
@@ -127,12 +171,36 @@ qrlabelr::gp_label(dat = as.data.frame(croqui_uni$fieldbook),
 
 ## Caderno a nível de planta
 ```{r}
+caderno_planta <- 
+  dbc$fieldbook |>
+  mutate(PLANTA = paste0("P", 1:5, collapse = ",")) |> 
+  separate_longer_delim(cols = PLANTA, delim = ",") |> 
+  mutate(UNIQUE_ID = UUIDgenerate(n = 160))
+
+
+export(caderno_planta, "caderno_planta.xlsx")
 
 ```
 
 
-
 # Experimentos Fatoriais
+
+```{r}
+trats <- c("NEPEM01", "TESTEMUNHA", "GEN01", "GEN02", "GEN03", "GEN04", "GEN05", "GEN06")
+
+fat <- 
+  full_factorial(
+    factors = c("GEN", "EPOCA"),
+    nlevels = c(8, 3),
+    design = "RCBD",
+    levels = c(trats, "E1", "E2", "E3"),
+    fill_color = FALSE,
+    layout = "custom",
+    layout_allocation = c(4, 6)
+  )
+
+```
+
 
 
 
@@ -151,3 +219,61 @@ Na pasta data, são encontrados quatro conjuntos de dados.
 O desafio consistirá em combinar calcular o número de grãos e cápsulas de cada planta, o comprimento e largura médio dos grãos de cada planta e juntar com as variáveis de plantas.
 
 Em uma segunda etapa, computar os valores médios por genótipo, juntando com a massa de mil grãos.
+
+
+```{r}
+capsulas <- import("data/capsulas.xlsx")
+graos <- import("data/graos.csv")
+lab <- import("data/laboratorio.xlsx")
+mmg <- import("data/mmg.xlsx")
+```
+
+# Estatísticas
+```{r}
+stat_grao <- 
+  graos |> 
+  group_by(img) |> 
+  summarise(
+    NG = n(),
+    CG = mean(length),
+    LG = mean(width)
+  ) |> 
+  mutate(INDIVIDUO = str_extract(img, "^[0-9]+") |> as.numeric()) |> 
+  select(-img)
+
+stat_caps <- 
+  capsulas |> 
+  group_by(img) |> 
+  summarise(
+    NC = n(),
+  ) |> 
+  mutate(INDIVIDUO = str_extract(img, "^[0-9]+") |> as.numeric()) |> 
+  select(-img)
+
+
+junto <- reduce(list(lab, stat_grao, stat_caps), left_join)
+```
+
+
+# Dados a nível de genótipo
+```{r}
+dfgen <- 
+junto |> 
+  group_by(TIPO, GEN) |> 
+  summarise(across(AP:NC, \(x){mean(x, na.rm = TRUE)})) |> 
+  drop_na() |> 
+  left_join(mmg)
+
+
+```
+
+
+# Exploração
+```{r}
+ggplot(dfgen, aes(TIPO, AP)) +
+  geom_boxplot()
+
+```
+
+
+
